@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Heart Simulation – Interactive Anatomy</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">♥</span>
+        <span class="logo-text">CardioSim</span>
+      </div>
+      <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="simulation">Simulation</button>
+        <button class="tab-btn" data-tab="learn">Learn</button>
+        <button class="tab-btn" data-tab="quiz">Quiz</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===== TAB: SIMULATION ===== -->
+  <main id="tab-simulation" class="tab-content active">
+    <div class="sim-layout">
+
+      <!-- LEFT: Controls -->
+      <aside class="controls-panel">
+        <h2 class="panel-title">Controls</h2>
+
+        <div class="control-group">
+          <button id="btnPlayPause" class="btn-primary" aria-label="Start simulation">
+            <span class="btn-icon">▶</span> Start
+          </button>
+        </div>
+
+        <div class="control-group">
+          <label class="ctrl-label" for="bpmSlider">
+            Heart Rate <span id="bpmDisplay" class="ctrl-value">72 BPM</span>
+          </label>
+          <input type="range" id="bpmSlider" min="30" max="180" value="72" class="slider" />
+          <div class="bpm-ticks">
+            <span>30</span><span>105</span><span>180</span>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="toggle-label">
+            <input type="checkbox" id="toggleLabels" checked />
+            <span class="toggle-track"></span>
+            <span>Show Labels</span>
+          </label>
+        </div>
+
+        <div class="control-group">
+          <label class="toggle-label">
+            <input type="checkbox" id="toggleSound" />
+            <span class="toggle-track"></span>
+            <span>Sound (Lub-Dub)</span>
+          </label>
+        </div>
+
+        <!-- Live stats -->
+        <div class="stats-box">
+          <div class="stat-row">
+            <span class="stat-name">Blood Pressure</span>
+            <span class="stat-val" id="statBP">120/80 <small>mmHg</small></span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-name">SpO2</span>
+            <span class="stat-val highlight">98%</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-name">Phase</span>
+            <span class="stat-val" id="statPhase">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-name">Beat #</span>
+            <span class="stat-val" id="statBeat">0</span>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend">
+          <div class="legend-item"><span class="dot oxygenated"></span> Oxygenated (red)</div>
+          <div class="legend-item"><span class="dot deoxygenated"></span> Deoxygenated (blue)</div>
+        </div>
+      </aside>
+
+      <!-- CENTER: Heart SVG -->
+      <section class="heart-stage">
+        <div class="heart-wrap" id="heartWrap">
+          <div id="parallaxContainer" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; perspective: 1200px;">
+            <svg id="heartSVG" viewBox="0 0 600 620" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Interactive heart diagram" style="transform-style: preserve-3d; transition: transform 0.1s ease-out; width: min(560px, 100%); max-height: calc(100vh - 120px);">
+              <defs>
+                <!-- Gradients -->
+                <radialGradient id="gRed" cx="50%" cy="40%">
+                  <stop offset="0%" stop-color="#ff6b8a"/>
+                  <stop offset="100%" stop-color="#c0183a"/>
+                </radialGradient>
+                <radialGradient id="gBlue" cx="50%" cy="40%">
+                  <stop offset="0%" stop-color="#6bb5ff"/>
+                  <stop offset="100%" stop-color="#1845a8"/>
+                </radialGradient>
+                <radialGradient id="gMid" cx="50%" cy="40%">
+                  <stop offset="0%" stop-color="#e8c6d4"/>
+                  <stop offset="100%" stop-color="#a07090"/>
+                </radialGradient>
+                <filter id="glow">
+                  <feGaussianBlur stdDeviation="3" result="blur"/>
+                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+                <filter id="shadow">
+                  <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#00000040"/>
+                </filter>
+                <!-- Animated blood particles marker -->
+                <circle id="bloodParticle" r="5"/>
+              </defs>
+
+              <!-- ── VESSELS ── -->
+              <!-- Superior Vena Cava -->
+              <path id="vc-superior" class="vessel deoxygenated clickable" d="M340,30 L340,140" stroke-width="18" stroke-linecap="round" fill="none"
+                data-label="Superior Vena Cava" data-info="Carries deoxygenated blood from the upper body to right atrium." style="transform: translateZ(50px);" />
+              
+              <!-- Inferior Vena Cava -->
+              <path id="vc-inferior" class="vessel deoxygenated clickable" d="M340,430 L340,560" stroke-width="18" stroke-linecap="round" fill="none"
+                data-label="Inferior Vena Cava" data-info="Returns deoxygenated blood from lower body." style="transform: translateZ(30px);" />
+              
+              <!-- Pulmonary Artery -->
+              <path id="pulm-artery" class="vessel deoxygenated clickable" d="M230,160 Q180,100 120,90" stroke-width="18" stroke-linecap="round" fill="none"
+                data-label="Pulmonary Artery" data-info="Carries deoxygenated blood to lungs." style="transform: translateZ(80px);" />
+              
+              <!-- Pulmonary Veins -->
+              <path id="pulm-vein" class="vessel oxygenated clickable" d="M120,130 Q170,145 210,200" stroke-width="18" stroke-linecap="round" fill="none"
+                data-label="Pulmonary Veins" data-info="Returns oxygenated blood from lungs." style="transform: translateZ(40px);" />
+              
+              <!-- Aorta -->
+              <path id="aorta" class="vessel oxygenated clickable" d="M250,120 Q255,50 300,30 Q350,10 390,50" stroke-width="20" stroke-linecap="round" fill="none"
+                data-label="Aorta" data-info="Largest artery carrying oxygenated blood." style="transform: translateZ(90px);" />
+              <path id="aorta-desc" class="vessel oxygenated" d="M250,120 L250,480 Q250,530 230,560" stroke-width="14" stroke-linecap="round" fill="none" style="transform: translateZ(30px);" />
+
+              <!-- ── HEART CHAMBERS ── -->
+              <ellipse id="right-atrium" class="chamber clickable" cx="355" cy="188" rx="62" ry="52" fill="url(#gBlue)"
+                data-label="Right Atrium" data-info="Upper-right chamber." style="transform: translateZ(60px);" />
+              <ellipse id="left-atrium" class="chamber clickable" cx="232" cy="188" rx="58" ry="52" fill="url(#gRed)"
+                data-label="Left Atrium" data-info="Upper-left chamber." style="transform: translateZ(60px);" />
+
+              <!-- Septum -->
+              <line x1="295" y1="155" x2="295" y2="460" stroke="#6b2040" stroke-width="6" stroke-dasharray="8 4" opacity="0.5" style="transform: translateZ(20px);" />
+
+              <!-- Right Ventricle -->
+              <path id="right-ventricle" class="chamber clickable" d="M295,260 Q370,250 400,300 Q430,360 390,430 Q360,470 295,470 Z" fill="url(#gBlue)"
+                data-label="Right Ventricle" data-info="Lower-right chamber." style="transform: translateZ(100px);" />
+              
+              <!-- Left Ventricle -->
+              <path id="left-ventricle" class="chamber clickable" d="M295,260 Q220,250 190,300 Q160,360 200,430 Q230,470 295,470 Z" fill="url(#gRed)"
+                data-label="Left Ventricle" data-info="Lower-left chamber." style="transform: translateZ(100px);" />
+
+              <!-- ── VALVES ── -->
+              <ellipse id="valve-tricuspid" class="valve clickable" cx="355" cy="248" rx="28" ry="10" style="transform: translateZ(110px);" />
+              <ellipse id="valve-mitral" class="valve clickable" cx="237" cy="248" rx="28" ry="10" style="transform: translateZ(110px);" />
+              <ellipse id="valve-pulmonary" class="valve clickable" cx="218" cy="157" rx="20" ry="8" style="transform: translateZ(90px);" />
+              <ellipse id="valve-aortic" class="valve clickable" cx="267" cy="157" rx="20" ry="8" style="transform: translateZ(95px);" />
+
+              <!-- ── LUNG ICONS ── -->
+              <g id="lung-icon" class="clickable" data-label="Lungs" data-info="Gas exchange." style="transform: translateZ(70px);">
+                <ellipse cx="100" cy="108" rx="32" ry="42" fill="#e8d4e0" stroke="#a07090" stroke-width="2" opacity="0.85"/>
+                <text x="100" y="114" text-anchor="middle" font-size="22">🫁</text>
+              </g>
+
+              <!-- ── BLOOD FLOW PATHS ── -->
+              <path id="flow-ra-rv" class="flow-path" d="M355,238 Q355,254 355,260" stroke-width="12" stroke="none" fill="none"/>
+              <path id="flow-rv-lung" class="flow-path" d="M300,350 Q250,250 218,160 Q200,130 120,108" stroke-width="10" stroke="none" fill="none"/>
+              <path id="flow-lung-la" class="flow-path" d="M120,125 Q165,145 210,195" stroke-width="10" stroke="none" fill="none"/>
+              <path id="flow-la-lv" class="flow-path" d="M237,238 Q237,254 237,265" stroke-width="12" stroke="none" fill="none"/>
+              <path id="flow-lv-body" class="flow-path" d="M260,300 Q257,200 255,130 Q255,60 305,32" stroke-width="10" stroke="none" fill="none"/>
+              <g id="particles" style="transform: translateZ(120px);"></g>
+
+            </svg>
+          </div>
+
+          <!-- Heartbeat ring -->
+          <div class="pulse-ring" id="pulseRing"></div>
+        </div>
+      </section>
+
+      <!-- ECG Container -->
+      <section class="ecg-container">
+        <div class="ecg-header">
+          <span>ECG / EKG (LEAD II)</span>
+          <span style="color:var(--text-muted)">10mm/mV 25mm/s</span>
+        </div>
+        <canvas id="ecgCanvas"></canvas>
+      </section>
+
+      <!-- RIGHT: Info Panel -->
+      <aside class="info-panel" id="infoPanel">
+        <h2 class="panel-title">Component Info</h2>
+        <div id="infoPanelContent">
+          <p class="info-placeholder">Click any chamber, valve, or vessel on the diagram to learn about it.</p>
+        </div>
+
+        <div class="phase-indicator">
+          <h3>Cardiac Cycle</h3>
+          <div class="cycle-steps">
+            <div class="cycle-step" id="step1">
+              <span class="step-num">1</span>
+              <span>Atrial Diastole</span>
+            </div>
+            <div class="cycle-step" id="step2">
+              <span class="step-num">2</span>
+              <span>Atrial Systole</span>
+            </div>
+            <div class="cycle-step" id="step3">
+              <span class="step-num">3</span>
+              <span>Ventricular Systole</span>
+            </div>
+            <div class="cycle-step" id="step4">
+              <span class="step-num">4</span>
+              <span>Ventricular Diastole</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+    </div><!-- /sim-layout -->
+  </main>
+
+  <!-- ===== TAB: LEARN ===== -->
+  <main id="tab-learn" class="tab-content">
+    <div class="learn-layout">
+      <h1 class="learn-title">How the Human Heart Works</h1>
+
+      <div class="learn-cards">
+        <article class="learn-card">
+          <div class="card-icon">🫀</div>
+          <h3>The Heart as a Pump</h3>
+          <p>The heart is a muscular organ roughly the size of your fist, beating 60–100 times per minute at rest — over 100,000 times a day. Its job is simple but vital: pump blood continuously around the body. It has four chambers: two atria (upper) and two ventricles (lower), separated by the cardiac septum.</p>
+        </article>
+
+        <article class="learn-card">
+          <div class="card-icon">🔵</div>
+          <h3>Pulmonary Circulation</h3>
+          <p>Deoxygenated blood (shown in blue) returning from the body enters the <strong>right atrium</strong> via the vena cava. It passes through the <strong>tricuspid valve</strong> into the <strong>right ventricle</strong>, which pumps it through the <strong>pulmonary artery</strong> to the lungs. There, CO₂ is exhaled and O₂ is absorbed, turning blue blood red.</p>
+        </article>
+
+        <article class="learn-card">
+          <div class="card-icon">🔴</div>
+          <h3>Systemic Circulation</h3>
+          <p>Freshly oxygenated blood (shown in red) returns from the lungs via the <strong>pulmonary veins</strong> into the <strong>left atrium</strong>. It passes through the <strong>mitral valve</strong> into the powerful <strong>left ventricle</strong>, which pumps it through the <strong>aorta</strong> to deliver oxygen and nutrients throughout the entire body.</p>
+        </article>
+
+        <article class="learn-card">
+          <div class="card-icon">🚪</div>
+          <h3>Heart Valves</h3>
+          <p>Four valves act as one-way doors, ensuring blood flows in only one direction. The <strong>tricuspid</strong> and <strong>mitral</strong> valves separate the atria from the ventricles (AV valves). The <strong>pulmonary</strong> and <strong>aortic</strong> valves (semilunar valves) guard the exits of the ventricles. The "lub-dub" heartbeat sound is produced by valves closing.</p>
+        </article>
+
+        <article class="learn-card">
+          <div class="card-icon">⚡</div>
+          <h3>The Cardiac Cycle</h3>
+          <p>Each heartbeat is one complete <em>cardiac cycle</em>. <strong>Systole</strong> is contraction (pumping phase); <strong>diastole</strong> is relaxation (filling phase). The cycle begins with both atria contracting simultaneously, followed by both ventricles contracting. The sinoatrial (SA) node — the heart's natural pacemaker — triggers each beat with an electrical signal.</p>
+        </article>
+
+        <article class="learn-card">
+          <div class="card-icon">📊</div>
+          <h3>Heart Rate & Cardiac Output</h3>
+          <p>Normal resting heart rate is <strong>60–100 BPM</strong>. Athletes may have resting rates as low as 40 BPM due to a more efficient, stronger heart. Cardiac output (volume pumped per minute) = Heart Rate × Stroke Volume. During exercise, cardiac output can increase 4–5× to meet the body's increased oxygen demand.</p>
+        </article>
+      </div>
+
+      <div class="flow-diagram">
+        <h2>Blood Flow at a Glance</h2>
+        <div class="flow-steps">
+          <div class="flow-step blue">Body<br/><small>(deoxygenated)</small></div>
+          <div class="arrow">→</div>
+          <div class="flow-step blue">Right Atrium</div>
+          <div class="arrow">→</div>
+          <div class="flow-step blue">Right Ventricle</div>
+          <div class="arrow">→</div>
+          <div class="flow-step blue">Pulmonary Artery</div>
+          <div class="arrow">→</div>
+          <div class="flow-step pink">Lungs<br/><small>(gas exchange)</small></div>
+          <div class="arrow">→</div>
+          <div class="flow-step red">Pulmonary Veins</div>
+          <div class="arrow">→</div>
+          <div class="flow-step red">Left Atrium</div>
+          <div class="arrow">→</div>
+          <div class="flow-step red">Left Ventricle</div>
+          <div class="arrow">→</div>
+          <div class="flow-step red">Aorta</div>
+          <div class="arrow">→</div>
+          <div class="flow-step red">Body<br/><small>(oxygenated)</small></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== TAB: QUIZ ===== -->
+  <main id="tab-quiz" class="tab-content">
+    <div class="quiz-layout">
+      <h1 class="learn-title">Test Your Knowledge</h1>
+      <p class="quiz-sub">Answer all 8 questions to see your score.</p>
+
+      <div id="quizContainer"></div>
+
+      <div id="quizResult" class="quiz-result hidden">
+        <div class="result-score" id="resultScore"></div>
+        <p id="resultMsg"></p>
+        <button class="btn-primary" id="btnRetry">Try Again</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- TOOLTIP -->
+  <div id="tooltip" class="tooltip hidden" role="tooltip"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
